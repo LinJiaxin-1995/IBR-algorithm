@@ -1,0 +1,55 @@
+开源Mediasdk安装使用
+(1).CentOS Linux release 7.6.1810 (Core) 
+(2).kernel version: 4.18.0-rc1+
+(3).Mediasdk(1.27) git commit version: acabda62ffa39f6889316b02381463af3f8dcafd
+
+安装流程：
+(1).安装系统
+  1) yum update -y;
+     yum install -y git gcc gcc-c++ openssl-devel elfutils-libelf-devel automake autoconf libtool mesa-libGL-devel libpciaccess-devel;
+  2) 安装cmake
+    tar xvzf cmake-3.10.1.tar.gz
+    cd cmake-3.10.1
+    ./bootstrap --prefix=/usr;make;make install
+
+(2).安装mediasdk
+  1) cp linux-firmware_d1147327232ec4616a66ab898df84f9700c816c1/i915/skl_dmc_ver1_26.bin /lib/firmware/i915/.;
+  2) cd linux-stable_ce397d215ccd07b8ae3f71db689aedb85d56ab40;(！！！修改include/linux/mmzone.h 文件中的 #define MAX_ORDER 13 // modify by wcl 20180717 11->13)
+     cp /boot/config-`uname -r` .config;
+     make olddefconfig   //error   yum install bison/flex;
+     make -j8;make modules_install;make install;
+  3) vi /etc/default/grub
+     GRUB_DEFAULT="CentOS Linux (4.18.0-rc1+) 7 (Core)"
+     GRUB_CMDLINE_LINUX_DEFAULT="i915.alpha_support=1"
+    
+     grub2-mkconfig -o /boot/grub2/grub.cfg;
+     reboot;
+  4) cd libva_b6c50dad4d7d14c507108d9f468662e2d7ae1c4d;
+     ./autogen.sh --prefix=/usr --libdir=/usr/lib64
+     make -j4;make install;
+  5) cd libva-utils_9a10ad663349732decd668a426cfc349b0010d1d;
+     ./autogen.sh --prefix=/usr --libdir=/usr/lib64
+     make -j4;make install;
+  6) mkdir build;
+     cd build;
+     cmake ../media_driver_10f382d136e1e9e99c2fd027c533662a901d688d -DMEDIA_VERSION="2.0.0" -DBUILD_ALONG_WITH_CMRTLIB=1 -DBS_DIR_GMMLIB=`pwd`/../gmmlib_99ff76418179b4fb069235ff6c028330c802563a/Source/GmmLib/ -DBS_DIR_COMMON=`pwd`/../gmmlib_99ff76418179b4fb069235ff6c028330c802563a/Source/Common/ -DBS_DIR_INC=`pwd`/../gmmlib_99ff76418179b4fb069235ff6c028330c802563a/Source/inc/ -DBS_DIR_MEDIA=`pwd`/../media_driver_10f382d136e1e9e99c2fd027c533662a901d688d -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_INSTALL_LIBDIR=/usr/lib64 -DINSTALL_DRIVER_SYSCONF=OFF -DLIBVA_DRIVERS_PATH=/usr/lib64/dri;
+     make -j8;make install;
+  7) cd MediaSDK_acabda62ffa39f6889316b02381463af3f8dcafd_orig
+     export MFX_HOME=`pwd`
+     perl tools/builder/build_mfx.pl --cmake=intel64.make.release
+     make -C __cmake/intel64.make.release/ -j4
+     cd __cmake/intel64.make.release
+     make install
+
+     demo运行：cd __bin/release/， 需要修改/root/.bashrc文件指定mediasdk相关路径
+       vi /root/.bashrc
+PATH=$PATH:$HOME/bin
+export PATH
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/mediasdk/lib64:/opt/intel/compilers_and_libraries_2018.3.222/linux/ipp/lib/intel64_lin
+export LD_LIBRARY_PATH
+MFX_HOME=/opt/intel/mediasdk
+export MFX_HOME
+LIBVA_DRIVER_NAME=iHD
+export LIBVA_DRIVER_NAME
+
+
